@@ -14,8 +14,10 @@ import android.os.Build;
 import android.support.annotation.ColorInt;
 import android.support.annotation.NonNull;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.veaer.glass.setter.Setter;
@@ -74,13 +76,34 @@ public class Glass {
 
         public Builder statusBarWithLower(Window window, Context context, @ColorInt int defaultColor) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                LocalDisplay.init(context);
+
+                // get status bar height in pixel
+                int statusBarHeight = 0;
+                int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
+                if (resourceId > 0) {
+                    statusBarHeight = context.getResources().getDimensionPixelSize(resourceId);
+                }
+
                 WindowManager.LayoutParams localLayoutParams = window.getAttributes();
                 localLayoutParams.flags = (WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS | localLayoutParams.flags);
-                View contentView = window.getDecorView().findViewById(android.R.id.content);
-                contentView.setBackgroundColor(defaultColor);
-                LocalDisplay.addTopPadding(contentView, 25);
-                background(contentView);
+
+                // set attributes again to trigger #dispatchWindowAttributesChanged
+                window.setAttributes(localLayoutParams);
+
+                ViewGroup decorView = (ViewGroup)window.getDecorView();
+
+                ViewGroup decorChild = (ViewGroup)decorView.getChildAt(0);
+
+                decorView.removeView(decorChild);
+
+                FrameLayout frameLayout = new FrameLayout(context);
+                frameLayout.setPadding(0, statusBarHeight, 0, 0);
+
+                frameLayout.addView(decorChild);
+                frameLayout.setBackgroundColor(defaultColor);
+                background(frameLayout);
+
+                decorView.addView(frameLayout);
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 Setter windowSetter = SetterFactory.getSystemSetter(window);
                 windowSetter.setColor(defaultColor);
